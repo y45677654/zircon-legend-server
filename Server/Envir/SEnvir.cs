@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
@@ -82,6 +82,10 @@ namespace Server.Envir
 
         #region Logging
 
+        public static List<string> SystemLogHistory { get; } = new List<string>();
+        public static List<string> ChatLogHistory { get; } = new List<string>();
+        public static readonly object LogHistoryLock = new object();
+
         public static ConcurrentQueue<string> DisplayLogs { get; set; } = new ConcurrentQueue<string>();
         public static ConcurrentQueue<string> Logs { get; set; } = new ConcurrentQueue<string>();
         public static void Log(string log, bool hardLog = true)
@@ -89,6 +93,16 @@ namespace Server.Envir
             DateTime now = Time.Now.ToLocalTime();
 
             log = $"[{now.ToString("yyyy-MM-dd HH:mm:ss")}]: {log}";
+
+            // 将日志安全地存入系统日志历史缓冲区，容量上限 3000 条
+            lock (LogHistoryLock)
+            {
+                SystemLogHistory.Add(log);
+                if (SystemLogHistory.Count > 3000)
+                {
+                    SystemLogHistory.RemoveAt(0);
+                }
+            }
 
             if (DisplayLogs.Count < 300)
                 DisplayLogs.Enqueue(log);
@@ -119,6 +133,16 @@ namespace Server.Envir
         public static void LogChat(string log)
         {
             log = string.Format("[{0:F}]: {1}", Time.Now.ToLocalTime(), log);
+
+            // 将聊天日志安全地存入聊天日志历史缓冲区，容量上限 3000 条
+            lock (LogHistoryLock)
+            {
+                ChatLogHistory.Add(log);
+                if (ChatLogHistory.Count > 3000)
+                {
+                    ChatLogHistory.RemoveAt(0);
+                }
+            }
 
             if (DisplayChatLogs.Count < 500)
                 DisplayChatLogs.Enqueue(log);

@@ -7,6 +7,7 @@ using Server.WebApi.Services;
 using Server.WebApi.Endpoints;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace Server.WebApi
 {
@@ -39,6 +40,9 @@ namespace Server.WebApi
                     ContentRootPath = Path.GetDirectoryName(wwwrootPath) ?? Environment.CurrentDirectory,
                     WebRootPath = wwwrootPath
                 });
+
+                // 清理控制台日志提供程序，彻底静音 ASP.NET Core 内部框架的冗长调试输出，保证控制台干净
+                builder.Logging.ClearProviders();
 
                 // Configure Kestrel to listen on specified port
                 builder.WebHost.ConfigureKestrel(options =>

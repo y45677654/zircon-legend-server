@@ -59,6 +59,10 @@ namespace Server.WebApi.Endpoints
 
             if (success)
             {
+                // [后台修改系统配置] 详细记录管理员修改整个配置文件并保存的操作日志
+                var adminEmail = JwtHelper.GetEmail(user);
+                Server.Envir.SEnvir.Log($"[后台修改系统配置] 管理员={adminEmail}, 修改了完整的系统配置文件并已保存生效");
+
                 return Results.Ok(new { message });
             }
 
@@ -98,6 +102,10 @@ namespace Server.WebApi.Endpoints
 
             if (success)
             {
+                // [后台更新单项配置] 详细记录管理员修改特定配置项的操作日志
+                var adminEmail = JwtHelper.GetEmail(user);
+                Server.Envir.SEnvir.Log($"[后台更新单项配置] 管理员={adminEmail}, 区域={request.Section ?? "默认"}, 配置项={request.Key}, 新值={request.Value ?? "空"}");
+
                 return Results.Ok(new { message });
             }
 
@@ -142,6 +150,11 @@ namespace Server.WebApi.Endpoints
                     Config.OnlyAdminLogin = boolValue;
                     // 同时保存到 INI 文件
                     configService.UpdateConfigValue("Control", "OnlyAdminLogin", boolValue.ToString());
+
+                    // [后台更新运行参数] 详细记录管理员修改运行时策略的操作日志
+                    var adminEmail = JwtHelper.GetEmail(user);
+                    Server.Envir.SEnvir.Log($"[后台更新运行参数] 管理员={adminEmail}, 配置项=OnlyAdminLogin (是否仅管理员登录), 新值={Config.OnlyAdminLogin}");
+
                     return Results.Ok(new { message = $"OnlyAdminLogin set to {Config.OnlyAdminLogin}" });
                 default:
                     return Results.BadRequest(new { message = $"Unknown runtime config key: {request.Key}" });

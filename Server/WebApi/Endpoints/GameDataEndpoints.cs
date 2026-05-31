@@ -232,6 +232,10 @@ namespace Server.WebApi.Endpoints
                 return Results.BadRequest(new { message });
             }
 
+            // [后台赠送物品] 详细记录管理员从Web后台向玩家赋予物品的操作日志
+            var adminEmail = JwtHelper.GetEmail(user);
+            Server.Envir.SEnvir.Log($"[后台赠送物品] 管理员={adminEmail}, 目标角色={request.CharacterName}, 物品ID={request.ItemIndex}, 数量={request.Count}");
+
             return Results.Ok(new { message });
         }
 
@@ -526,6 +530,10 @@ namespace Server.WebApi.Endpoints
             {
                 return Results.BadRequest(new { message });
             }
+
+            // [后台传送玩家] 详细记录管理员从Web后台传送玩家到指定地图和坐标的操作日志
+            var adminEmail = JwtHelper.GetEmail(user);
+            Server.Envir.SEnvir.Log($"[后台传送玩家] 管理员={adminEmail}, 目标角色={request.CharacterName}, 目标地图ID={request.MapIndex}, 坐标=({request.X}, {request.Y})");
 
             return Results.Ok(new { message });
         }
@@ -941,6 +949,10 @@ namespace Server.WebApi.Endpoints
             {
                 return Results.BadRequest(new { message });
             }
+
+            // [后台赠送技能] 详细记录管理员从Web后台向玩家赋予/修改技能的操作日志
+            var adminEmail = JwtHelper.GetEmail(user);
+            Server.Envir.SEnvir.Log($"[后台赠送技能] 管理员={adminEmail}, 目标角色={request.CharacterName}, 技能ID={request.MagicIndex}, 技能等级={request.Level}");
 
             return Results.Ok(new { message });
         }

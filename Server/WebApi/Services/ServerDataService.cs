@@ -343,6 +343,7 @@ namespace Server.WebApi.Services
                     LastLogin = a.LastLogin,
                     LastIP = a.LastIP,
                     CharacterCount = a.Characters?.Count(c => !c.Deleted) ?? 0,
+                    Gold = a.Gold,
                     GameGold = a.GameGold,
                     HuntGold = a.HuntGold
                 })
@@ -396,6 +397,7 @@ namespace Server.WebApi.Services
             account.Banned = true;
             account.BanReason = reason;
             account.ExpiryDate = expiryDate ?? DateTime.MaxValue;
+            SEnvir.SaveUserDatas();
             return true;
         }
 
@@ -410,6 +412,7 @@ namespace Server.WebApi.Services
             account.Banned = false;
             account.BanReason = "";
             account.ExpiryDate = DateTime.MinValue;
+            SEnvir.SaveUserDatas();
             return true;
         }
 
@@ -480,6 +483,108 @@ namespace Server.WebApi.Services
             // Save to database
             SEnvir.SaveUserDatas();
             return (true, "Account created successfully");
+        }
+
+        /// <summary>
+        /// 为账号充值或扣除元宝 (GameGold)
+        /// </summary>
+        /// <param name="email">账号邮箱</param>
+        /// <param name="amount">变更数量（正数为充值存入，负数为系统扣除）</param>
+        /// <returns>操作是否成功</returns>
+        public bool AddGameGold(string email, int amount)
+        {
+            var account = GetAccountByEmail(email);
+            if (account == null) return false;
+
+            // 限制最低为 0
+            account.GameGold = Math.Max(0, account.GameGold + amount);
+            SEnvir.SaveUserDatas();
+
+            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+            if (player != null)
+            {
+                player.Enqueue(new S.GameGoldChanged { GameGold = account.GameGold });
+                
+                // 商业中性红字通告
+                if (amount > 0)
+                {
+                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 元宝！", MessageType.System);
+                }
+                else if (amount < 0)
+                {
+                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 元宝。", MessageType.System);
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 为账号充值或扣除猎币 (HuntGold)
+        /// </summary>
+        /// <param name="email">账号邮箱</param>
+        /// <param name="amount">变更数量（正数为充值存入，负数为系统扣除）</param>
+        /// <returns>操作是否成功</returns>
+        public bool AddHuntGold(string email, int amount)
+        {
+            var account = GetAccountByEmail(email);
+            if (account == null) return false;
+
+            // 限制最低为 0
+            account.HuntGold = Math.Max(0, account.HuntGold + amount);
+            SEnvir.SaveUserDatas();
+
+            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+            if (player != null)
+            {
+                player.Enqueue(new S.HuntGoldChanged { HuntGold = account.HuntGold });
+                
+                // 商业中性红字通告
+                if (amount > 0)
+                {
+                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 猎币！", MessageType.System);
+                }
+                else if (amount < 0)
+                {
+                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 猎币。", MessageType.System);
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 为账号充值或扣除普通金币 (Gold)
+        /// </summary>
+        /// <param name="email">账号邮箱</param>
+        /// <param name="amount">变更数量（正数为充值存入，负数为系统扣除）</param>
+        /// <returns>操作是否成功</returns>
+        public bool AddNormalGold(string email, long amount)
+        {
+            var account = GetAccountByEmail(email);
+            if (account == null) return false;
+
+            // 限制最低为 0
+            account.Gold = Math.Max(0, account.Gold + amount);
+            SEnvir.SaveUserDatas();
+
+            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+            if (player != null)
+            {
+                player.Enqueue(new S.GoldChanged { Gold = account.Gold });
+                
+                // 商业中性红字通告
+                if (amount > 0)
+                {
+                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 金币！", MessageType.System);
+                }
+                else if (amount < 0)
+                {
+                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 金币。", MessageType.System);
+                }
+            }
+            return true;
         }
 
         #endregion
@@ -3150,35 +3255,127 @@ namespace Server.WebApi.Services
         #region Logs
 
         /// <summary>
-        /// Get system logs
+        /// 系统日志结构化传输模型
         /// </summary>
-        public List<string> GetSystemLogs(int count = 100)
+        public class LogEntryDto
         {
-            var logs = new List<string>();
-            var displayLogs = SEnvir.DisplayLogs.ToArray();
-
-            foreach (var log in displayLogs.TakeLast(count))
-            {
-                logs.Add(log);
-            }
-
-            return logs;
+            public string Time { get; set; } = "";
+            public string Level { get; set; } = ""; // "Info", "Warning", "Error"
+            public string Message { get; set; } = "";
+            public string Raw { get; set; } = "";
         }
 
         /// <summary>
-        /// Get chat logs
+        /// 获取系统日志，支持按级别与搜索内容过滤（最新产生的日志排在最前面）
         /// </summary>
-        public List<string> GetChatLogs(int count = 100)
+        public List<LogEntryDto> GetSystemLogs(int count = 100, string level = "all", string search = "")
         {
-            var logs = new List<string>();
-            var chatLogs = SEnvir.DisplayChatLogs.ToArray();
+            var result = new List<LogEntryDto>();
+            string[] history;
 
-            foreach (var log in chatLogs.TakeLast(count))
+            lock (SEnvir.LogHistoryLock)
             {
-                logs.Add(log);
+                history = SEnvir.SystemLogHistory.ToArray();
             }
 
-            return logs;
+            // 倒序排列，优先展示最新的日志
+            var query = history.Reverse();
+
+            foreach (var raw in query)
+            {
+                var entry = ParseLogEntry(raw);
+
+                // 级别过滤
+                if (level != "all" && !string.Equals(entry.Level, level, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                // 搜索检索过滤
+                if (!string.IsNullOrEmpty(search) && !entry.Raw.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                result.Add(entry);
+                if (result.Count >= count)
+                {
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 获取聊天日志，支持内容检索过滤（最新产生的日志排在最前面）
+        /// </summary>
+        public List<LogEntryDto> GetChatLogs(int count = 100, string search = "")
+        {
+            var result = new List<LogEntryDto>();
+            string[] history;
+
+            lock (SEnvir.LogHistoryLock)
+            {
+                history = SEnvir.ChatLogHistory.ToArray();
+            }
+
+            var query = history.Reverse();
+
+            foreach (var raw in query)
+            {
+                var entry = ParseLogEntry(raw);
+
+                if (!string.IsNullOrEmpty(search) && !entry.Raw.Contains(search, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                result.Add(entry);
+                if (result.Count >= count)
+                {
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 将原始的单行日志解析为结构化对象，提取时间戳、级别和消息体
+        /// </summary>
+        private LogEntryDto ParseLogEntry(string raw)
+        {
+            var dto = new LogEntryDto { Raw = raw };
+
+            // 尝试提取格式如 "[yyyy-MM-dd HH:mm:ss]: Message" 中的时间
+            if (raw.StartsWith("[") && raw.Contains("]:"))
+            {
+                int endIdx = raw.IndexOf("]:");
+                dto.Time = raw.Substring(1, endIdx - 1);
+                dto.Message = raw.Substring(endIdx + 2).Trim();
+            }
+            else
+            {
+                dto.Message = raw;
+            }
+
+            // 确定日志级别 (Level)
+            var msg = dto.Message;
+            if (msg.Contains("发生异常") || msg.Contains("崩溃") || msg.Contains("Error") || msg.Contains("Exception") || msg.Contains("网络包太多") || msg.Contains("错误") || msg.Contains("失败"))
+            {
+                dto.Level = "Error";
+            }
+            else if (msg.Contains("恢复默认值") || msg.Contains("无效值") || msg.Contains("警告") || msg.Contains("Warning") || msg.Contains("重置") || msg.Contains("未找到") || msg.Contains("warn"))
+            {
+                dto.Level = "Warning";
+            }
+            else
+            {
+                dto.Level = "Info";
+            }
+
+            return dto;
         }
 
         #endregion
