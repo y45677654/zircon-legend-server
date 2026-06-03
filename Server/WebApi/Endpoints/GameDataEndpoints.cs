@@ -35,6 +35,10 @@ namespace Server.WebApi.Endpoints
             group.MapPost("/maps/{index:int}/respawns", AddMapRespawn);
             group.MapPut("/maps/{index:int}/respawns/{respawnId:int}", UpdateMapRespawn);
             group.MapDelete("/maps/{index:int}/respawns/{respawnId:int}", DeleteMapRespawn);
+            group.MapGet("/maps/{index:int}/movements", GetMapMovements);
+            group.MapPost("/maps/{index:int}/movements", AddMapMovement);
+            group.MapPut("/maps/{index:int}/movements/{movementId:int}", UpdateMapMovement);
+            group.MapDelete("/maps/{index:int}/movements/{movementId:int}", DeleteMapMovement);
             group.MapPut("/maps/{index:int}", UpdateMap);
             group.MapPost("/maps/teleport", TeleportPlayer);
             group.MapPost("/maps/{index:int}/clear-monsters", ClearMonstersOnMap);
@@ -1440,10 +1444,10 @@ namespace Server.WebApi.Endpoints
 
         #endregion
 
-        #region Movement Management
+        #region Map Movements Management
 
         /// <summary>
-        /// Get movements for a map
+        /// 获取当前地图的所有传送链接点列表
         /// </summary>
         private static IResult GetMapMovements(
             ClaimsPrincipal user,
@@ -1464,7 +1468,7 @@ namespace Server.WebApi.Endpoints
         }
 
         /// <summary>
-        /// Add movement to map
+        /// 向指定地图添加一个新的传送链接点
         /// </summary>
         private static IResult AddMapMovement(
             ClaimsPrincipal user,
@@ -1487,7 +1491,7 @@ namespace Server.WebApi.Endpoints
         }
 
         /// <summary>
-        /// Update map movement
+        /// 修改指定地图的传送链接点
         /// </summary>
         private static IResult UpdateMapMovement(
             ClaimsPrincipal user,
@@ -1511,7 +1515,7 @@ namespace Server.WebApi.Endpoints
         }
 
         /// <summary>
-        /// Delete map movement
+        /// 删除指定地图下的一个传送链接点
         /// </summary>
         private static IResult DeleteMapMovement(
             ClaimsPrincipal user,

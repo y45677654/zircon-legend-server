@@ -496,26 +496,30 @@ namespace Server.WebApi.Services
             var account = GetAccountByEmail(email);
             if (account == null) return false;
 
-            // 限制最低为 0
-            account.GameGold = Math.Max(0, account.GameGold + amount);
-            SEnvir.SaveUserDatas();
-
-            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
-            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
-            if (player != null)
+            // 【安全修复】跨线程数据竞争修复：将操作转交游戏主线程异步处理
+            SEnvir.Post(_ =>
             {
-                player.Enqueue(new S.GameGoldChanged { GameGold = account.GameGold });
-                
-                // 商业中性红字通告
-                if (amount > 0)
+                // 限制最低为 0
+                account.GameGold = Math.Max(0, account.GameGold + amount);
+                SEnvir.SaveUserDatas();
+
+                // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+                var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+                if (player != null)
                 {
-                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 元宝！", MessageType.System);
+                    player.Enqueue(new S.GameGoldChanged { GameGold = account.GameGold });
+                    
+                    // 商业中性红字通告
+                    if (amount > 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 元宝！", MessageType.System);
+                    }
+                    else if (amount < 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 元宝。", MessageType.System);
+                    }
                 }
-                else if (amount < 0)
-                {
-                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 元宝。", MessageType.System);
-                }
-            }
+            });
             return true;
         }
 
@@ -530,26 +534,30 @@ namespace Server.WebApi.Services
             var account = GetAccountByEmail(email);
             if (account == null) return false;
 
-            // 限制最低为 0
-            account.HuntGold = Math.Max(0, account.HuntGold + amount);
-            SEnvir.SaveUserDatas();
-
-            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
-            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
-            if (player != null)
+            // 【安全修复】跨线程数据竞争修复：将操作转交游戏主线程异步处理
+            SEnvir.Post(_ =>
             {
-                player.Enqueue(new S.HuntGoldChanged { HuntGold = account.HuntGold });
-                
-                // 商业中性红字通告
-                if (amount > 0)
+                // 限制最低为 0
+                account.HuntGold = Math.Max(0, account.HuntGold + amount);
+                SEnvir.SaveUserDatas();
+
+                // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+                var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+                if (player != null)
                 {
-                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 猎币！", MessageType.System);
+                    player.Enqueue(new S.HuntGoldChanged { HuntGold = account.HuntGold });
+                    
+                    // 商业中性红字通告
+                    if (amount > 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 猎币！", MessageType.System);
+                    }
+                    else if (amount < 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 猎币。", MessageType.System);
+                    }
                 }
-                else if (amount < 0)
-                {
-                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 猎币。", MessageType.System);
-                }
-            }
+            });
             return true;
         }
 
@@ -564,26 +572,30 @@ namespace Server.WebApi.Services
             var account = GetAccountByEmail(email);
             if (account == null) return false;
 
-            // 限制最低为 0
-            account.Gold = Math.Max(0, account.Gold + amount);
-            SEnvir.SaveUserDatas();
-
-            // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
-            var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
-            if (player != null)
+            // 【安全修复】跨线程数据竞争修复：将操作转交游戏主线程异步处理
+            SEnvir.Post(_ =>
             {
-                player.Enqueue(new S.GoldChanged { Gold = account.Gold });
-                
-                // 商业中性红字通告
-                if (amount > 0)
+                // 限制最低为 0
+                account.Gold = Math.Max(0, account.Gold + amount);
+                SEnvir.SaveUserDatas();
+
+                // 安全复制快照：防止多线程遍历时集合被修改报 InvalidOperationException 异常
+                var player = SEnvir.Players.ToArray().FirstOrDefault(p => p.Character?.Account == account);
+                if (player != null)
                 {
-                    player.Connection?.ReceiveChat($"系统成功存入你 {amount} 金币！", MessageType.System);
+                    player.Enqueue(new S.GoldChanged { Gold = account.Gold });
+                    
+                    // 商业中性红字通告
+                    if (amount > 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 金币！", MessageType.System);
+                    }
+                    else if (amount < 0)
+                    {
+                        player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 金币。", MessageType.System);
+                    }
                 }
-                else if (amount < 0)
-                {
-                    player.Connection?.ReceiveChat($"系统扣除了你 {Math.Abs(amount)} 金币。", MessageType.System);
-                }
-            }
+            });
             return true;
         }
 
@@ -830,6 +842,9 @@ namespace Server.WebApi.Services
                 if (request.PartCount.HasValue) item.PartCount = request.PartCount.Value;
                 if (request.BlockMonsterDrop.HasValue) item.BlockMonsterDrop = request.BlockMonsterDrop.Value;
 
+                // 【安全补齐】更新物品后执行落盘保存，防止服务器重启或崩服回档
+                SEnvir.SaveSystem();
+
                 return (true, "物品更新成功");
             }
         }
@@ -899,6 +914,9 @@ namespace Server.WebApi.Services
                 newItem.BuffIcon = request.BuffIcon;
                 newItem.PartCount = request.PartCount;
                 newItem.BlockMonsterDrop = request.BlockMonsterDrop;
+
+                // 【安全补齐】创建新物品后执行系统保存落盘
+                SEnvir.SaveSystem();
 
                 SEnvir.Log($"创建新物品: Index={newItem.Index}, Name={newItem.ItemName}, Type={newItem.ItemType}");
 
@@ -2102,8 +2120,8 @@ namespace Server.WebApi.Services
                     }
                 }
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db，避免全服保存卡顿
+                SEnvir.SaveSystem();
 
                 return (true, "任务创建成功", GetQuestDetail(newQuest.Index));
             }
@@ -2164,51 +2182,64 @@ namespace Server.WebApi.Services
                     }
                 }
 
-                // Update Requirements
+                // 更新任务限制条件 (Requirements)
                 if (request.Requirements != null)
                 {
-                    // Clear existing requirements
-                    questInfo.Requirements.Clear();
-
-                    // Add new requirements
-                    var questList = SEnvir.QuestInfoList;
+                    // 清空原有的所有限制条件
+                    while (questInfo.Requirements.Count > 0)
+                    {
+                        questInfo.Requirements[0].Delete();
+                    }
+                    // 重新创建并赋值新传入的限制条件
                     foreach (var reqDto in request.Requirements)
                     {
-                        var requirement = questInfo.Requirements.AddNew();
-                        requirement.Requirement = Enum.Parse<QuestRequirementType>(reqDto.Requirement);
-                        requirement.IntParameter1 = reqDto.IntParameter1;
-                        requirement.Class = Enum.Parse<RequiredClass>(reqDto.Class);
-
-                        if (reqDto.QuestParameter != null && questList != null)
+                        var req = questInfo.Requirements.AddNew();
+                        if (Enum.TryParse<QuestRequirementType>(reqDto.Requirement, out var reqType))
                         {
-                            for (int i = 0; i < questList.Count; i++)
+                            req.Requirement = reqType;
+                        }
+                        req.IntParameter1 = reqDto.IntParameter1;
+                        if (reqDto.QuestParameter != null)
+                        {
+                            for (int i = 0; i < quests.Count; i++)
                             {
-                                if (questList[i].Index == reqDto.QuestParameter.Index)
+                                if (quests[i].Index == reqDto.QuestParameter.Index)
                                 {
-                                    requirement.QuestParameter = questList[i];
+                                    req.QuestParameter = quests[i];
                                     break;
                                 }
                             }
                         }
+                        if (Enum.TryParse<RequiredClass>(reqDto.Class, out var reqClass))
+                        {
+                            req.Class = reqClass;
+                        }
                     }
                 }
 
-                // Update Tasks
+                // 更新任务具体目标 (Tasks)
                 if (request.Tasks != null)
                 {
-                    // Clear existing tasks
-                    questInfo.Tasks.Clear();
-
-                    // Add new tasks
+                    // 清空原有的所有任务目标
+                    while (questInfo.Tasks.Count > 0)
+                    {
+                        questInfo.Tasks[0].Delete();
+                    }
                     var items = SEnvir.ItemInfoList;
+                    var monsters = SEnvir.MonsterInfoList;
+                    var maps = SEnvir.MapInfoList;
+                    // 重新创建并赋值新传入的任务目标
                     foreach (var taskDto in request.Tasks)
                     {
                         var task = questInfo.Tasks.AddNew();
-                        task.Task = Enum.Parse<QuestTaskType>(taskDto.Task);
+                        if (Enum.TryParse<QuestTaskType>(taskDto.Task, out var taskType))
+                        {
+                            task.Task = taskType;
+                        }
+                        task.MobDescription = taskDto.MobDescription ?? "";
                         task.Amount = taskDto.Amount;
-                        task.MobDescription = taskDto.MobDescription;
-
-                        // Set ItemParameter
+                        
+                        // 关联道具参数
                         if (taskDto.ItemParameter != null && items != null)
                         {
                             for (int i = 0; i < items.Count; i++)
@@ -2221,28 +2252,64 @@ namespace Server.WebApi.Services
                             }
                         }
 
-                        // MonsterDetails are handled separately (not in this simple implementation)
+                        // 关联怪物详细参数
+                        if (taskDto.MonsterDetails != null && taskDto.MonsterDetails.Count > 0)
+                        {
+                            foreach (var detailDto in taskDto.MonsterDetails)
+                            {
+                                var detail = task.MonsterDetails.AddNew();
+                                detail.Chance = detailDto.Chance;
+                                detail.Amount = detailDto.Amount;
+                                detail.DropSet = detailDto.DropSet;
+                                if (detailDto.MonsterIndex.HasValue && monsters != null)
+                                {
+                                    for (int i = 0; i < monsters.Count; i++)
+                                    {
+                                        if (monsters[i].Index == detailDto.MonsterIndex.Value)
+                                        {
+                                            detail.Monster = monsters[i];
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (detailDto.MapIndex.HasValue && maps != null)
+                                {
+                                    for (int i = 0; i < maps.Count; i++)
+                                    {
+                                        if (maps[i].Index == detailDto.MapIndex.Value)
+                                        {
+                                            detail.Map = maps[i];
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Update Rewards
+                // 更新任务奖励 (Rewards)
                 if (request.Rewards != null)
                 {
-                    // Clear existing rewards
-                    questInfo.Rewards.Clear();
-
-                    // Add new rewards
+                    // 清空原有的所有奖励
+                    while (questInfo.Rewards.Count > 0)
+                    {
+                        questInfo.Rewards[0].Delete();
+                    }
                     var items = SEnvir.ItemInfoList;
+                    // 重新创建并赋值新传入的奖励
                     foreach (var rewardDto in request.Rewards)
                     {
                         var reward = questInfo.Rewards.AddNew();
                         reward.Amount = rewardDto.Amount;
-                        reward.Class = Enum.Parse<RequiredClass>(rewardDto.Class);
                         reward.Choice = rewardDto.Choice;
                         reward.Bound = rewardDto.Bound;
                         reward.Duration = rewardDto.Duration;
-
-                        // Set Item
+                        if (Enum.TryParse<RequiredClass>(rewardDto.Class, out var rClass))
+                        {
+                            reward.Class = rClass;
+                        }
+                        // 关联奖励物品
                         if (rewardDto.Item != null && items != null)
                         {
                             for (int i = 0; i < items.Count; i++)
@@ -2257,8 +2324,8 @@ namespace Server.WebApi.Services
                     }
                 }
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db
+                SEnvir.SaveSystem();
 
                 return (true, "任务更新成功");
             }
@@ -2302,8 +2369,8 @@ namespace Server.WebApi.Services
 
                 quest.Delete();
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db
+                SEnvir.SaveSystem();
 
                 return (true, "删除成功");
             }
@@ -2430,8 +2497,8 @@ namespace Server.WebApi.Services
                 newStoreItem.Available = request.Available;
                 newStoreItem.Duration = request.Duration;
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】商城配置更新保存至 System.db
+                SEnvir.SaveSystem();
 
                 return (true, "商城商品添加成功", GetStoreItemDetail(newStoreItem.Index));
             }
@@ -2467,8 +2534,8 @@ namespace Server.WebApi.Services
                 if (request.Available.HasValue) storeItem.Available = request.Available.Value;
                 if (request.Duration.HasValue) storeItem.Duration = request.Duration.Value;
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】商城配置更新保存至 System.db
+                SEnvir.SaveSystem();
 
                 return (true, "商城商品更新成功");
             }
@@ -2499,8 +2566,8 @@ namespace Server.WebApi.Services
 
                 storeItem.Delete();
 
-                // Save to database
-                SEnvir.SaveUserDatas();
+                // 【安全修复】商城配置更新保存至 System.db
+                SEnvir.SaveSystem();
 
                 return (true, "删除成功");
             }
@@ -2773,6 +2840,9 @@ namespace Server.WebApi.Services
             if (request.ExperienceRate.HasValue) mapInfo.ExperienceRate = request.ExperienceRate.Value;
             if (request.GoldRate.HasValue) mapInfo.GoldRate = request.GoldRate.Value;
 
+            // 【安全修复】将地图静态更新保存至 System.db，修复原版重启丢失缺陷且避免卡顿
+            SEnvir.SaveSystem();
+
             return (true, "地图更新成功");
         }
 
@@ -3014,6 +3084,9 @@ namespace Server.WebApi.Services
                 {
                     UpdateMonsterStats(monster, request.Stats);
                 }
+
+                // 【安全补齐】修改怪物配置后强力保存系统配置数据库，防止重启回档
+                SEnvir.SaveSystem();
 
                 return (true, "怪物更新成功");
             }
@@ -3539,6 +3612,9 @@ namespace Server.WebApi.Services
                 EasterEvent = newDrop.EasterEvent
             };
 
+            // 【安全补齐】保存掉落表配置，防止重启丢失
+            SEnvir.SaveSystem();
+
             return (true, "添加成功", dto);
         }
 
@@ -3573,6 +3649,9 @@ namespace Server.WebApi.Services
             if (request.DropSet.HasValue) drop.DropSet = request.DropSet.Value;
             if (request.PartOnly.HasValue) drop.PartOnly = request.PartOnly.Value;
             if (request.EasterEvent.HasValue) drop.EasterEvent = request.EasterEvent.Value;
+
+            // 【安全补齐】保存掉落表配置，防止重启丢失
+            SEnvir.SaveSystem();
 
             return (true, "更新成功");
         }
@@ -3615,6 +3694,10 @@ namespace Server.WebApi.Services
             {
                 drop.Delete();
                 SEnvir.Log($"删除掉落记录成功: DropId={dropId}");
+
+                // 【安全补齐】系统配置数据库同步保存删除操作
+                SEnvir.SaveSystem();
+
                 return (true, "删除成功");
             }
             catch (Exception ex)
@@ -3755,6 +3838,9 @@ namespace Server.WebApi.Services
                 EasterEventChance = newRespawn.EasterEventChance
             };
 
+            // 【安全补齐】将刷怪点新增配置真正保存到 System.db
+            SEnvir.SaveSystem();
+
             return (true, "添加成功", dto);
         }
 
@@ -3832,6 +3918,9 @@ namespace Server.WebApi.Services
             if (request.EasterEventChance.HasValue) respawn.EasterEventChance = request.EasterEventChance.Value;
             if (request.EventSpawn.HasValue) respawn.EventSpawn = request.EventSpawn.Value;
 
+            // 【安全补齐】保存系统数据库，确保刷怪点修改不丢失
+            SEnvir.SaveSystem();
+
             return (true, "更新成功");
         }
 
@@ -3862,6 +3951,364 @@ namespace Server.WebApi.Services
             }
 
             respawn.Delete();
+
+            // 【安全补齐】保存系统数据库，确保刷怪点删除落盘
+            SEnvir.SaveSystem();
+
+            return (true, "删除成功");
+        }
+
+        #endregion
+
+        #region Map Movements Management
+
+        /// <summary>
+        /// 获取地图的所有传送点列表
+        /// </summary>
+        public List<MapMovementDto> GetMapMovements(int mapIndex)
+        {
+            // 先找到 MapInfo 对象（与 GetMapRespawns 一致的模式）
+            var maps = SEnvir.MapInfoList;
+            if (maps == null) return new List<MapMovementDto>();
+
+            MapInfo? map = null;
+            for (int i = 0; i < maps.Count; i++)
+            {
+                if (maps[i].Index == mapIndex)
+                {
+                    map = maps[i];
+                    break;
+                }
+            }
+
+            if (map == null) return new List<MapMovementDto>();
+
+            var movements = SEnvir.MovementInfoList;
+            if (movements == null) return new List<MapMovementDto>();
+
+            var result = new List<MapMovementDto>();
+            for (int i = 0; i < movements.Count; i++)
+            {
+                var movement = movements[i];
+                // 使用对象引用比较（与 GetMapRespawns 一致），避免 Map 关联为 null 时整数比较失败
+                if (movement.SourceRegion?.Map == map)
+                {
+                    // 计算起点区域代表坐标（PointList 中心点，与日志中 X/Y 坐标对应）
+                    var srcPoints = movement.SourceRegion?.PointList;
+                    int? srcX = null, srcY = null;
+                    if (srcPoints != null && srcPoints.Count > 0)
+                    {
+                        srcX = (int)srcPoints.Average(p => p.X);
+                        srcY = (int)srcPoints.Average(p => p.Y);
+                    }
+
+                    // 计算终点区域代表坐标
+                    var dstPoints = movement.DestinationRegion?.PointList;
+                    int? dstX = null, dstY = null;
+                    if (dstPoints != null && dstPoints.Count > 0)
+                    {
+                        dstX = (int)dstPoints.Average(p => p.X);
+                        dstY = (int)dstPoints.Average(p => p.Y);
+                    }
+
+                    result.Add(new MapMovementDto
+                    {
+                        Index = movement.Index,
+                        SourceRegionIndex = movement.SourceRegion?.Index ?? 0,
+                        SourceRegionDescription = movement.SourceRegion?.Description ?? "",
+                        SourceRegionX = srcX,
+                        SourceRegionY = srcY,
+                        DestinationRegionIndex = movement.DestinationRegion?.Index ?? 0,
+                        DestinationRegionDescription = movement.DestinationRegion?.Description ?? "",
+                        DestRegionX = dstX,
+                        DestRegionY = dstY,
+                        Icon = movement.Icon.ToString(),
+                        NeedItemIndex = movement.NeedItem?.Index,
+                        NeedItemName = movement.NeedItem?.ItemName,
+                        NeedSpawnIndex = movement.NeedSpawn?.Index,
+                        NeedSpawnName = movement.NeedSpawn?.Monster?.MonsterName,
+                        Effect = movement.Effect.ToString(),
+                        RequiredClass = movement.RequiredClass.ToString()
+                    });
+                }
+            }
+
+            return result.OrderBy(r => r.SourceRegionDescription).ToList();
+        }
+
+        /// <summary>
+        /// 添加传送点
+        /// </summary>
+        public (bool success, string message, MapMovementDto? movement) AddMapMovement(int mapIndex, AddMovementRequest request)
+        {
+            var movements = SEnvir.MovementInfoList;
+            if (movements == null) return (false, "传送点列表不可用", null);
+
+            var regions = SEnvir.MapRegionList;
+            if (regions == null) return (false, "区域列表不可用", null);
+
+            MapRegion? sourceRegion = null;
+            MapRegion? destRegion = null;
+
+            for (int i = 0; i < regions.Count; i++)
+            {
+                if (regions[i].Index == request.SourceRegionIndex)
+                {
+                    sourceRegion = regions[i];
+                }
+                if (regions[i].Index == request.DestinationRegionIndex)
+                {
+                    destRegion = regions[i];
+                }
+            }
+
+            if (sourceRegion == null) return (false, "源区域不存在", null);
+            if (destRegion == null) return (false, "目的区域不存在", null);
+
+            // 先找到 MapInfo 对象，使用对象引用比较（与 GetMapRespawns 一致）
+            var maps = SEnvir.MapInfoList;
+            MapInfo? map = null;
+            if (maps != null)
+            {
+                for (int i = 0; i < maps.Count; i++)
+                {
+                    if (maps[i].Index == mapIndex)
+                    {
+                        map = maps[i];
+                        break;
+                    }
+                }
+            }
+            if (map == null) return (false, "地图不存在", null);
+            if (sourceRegion.Map != map) return (false, "源区域不属于当前地图", null);
+
+            ItemInfo? needItem = null;
+            if (request.NeedItemIndex.HasValue && request.NeedItemIndex.Value > 0)
+            {
+                var items = SEnvir.ItemInfoList;
+                if (items != null)
+                {
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        if (items[i].Index == request.NeedItemIndex.Value)
+                        {
+                            needItem = items[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            RespawnInfo? needSpawn = null;
+            if (request.NeedSpawnIndex.HasValue && request.NeedSpawnIndex.Value > 0)
+            {
+                var spawns = SEnvir.RespawnInfoList;
+                if (spawns != null)
+                {
+                    for (int i = 0; i < spawns.Count; i++)
+                    {
+                        if (spawns[i].Index == request.NeedSpawnIndex.Value)
+                        {
+                            needSpawn = spawns[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            Enum.TryParse<MapIcon>(request.Icon, out var icon);
+            Enum.TryParse<MovementEffect>(request.Effect, out var effect);
+            Enum.TryParse<RequiredClass>(request.RequiredClass, out var requiredClass);
+
+            var newMovement = movements.CreateNewObject();
+            newMovement.SourceRegion = sourceRegion;
+            newMovement.DestinationRegion = destRegion;
+            newMovement.Icon = icon;
+            newMovement.NeedItem = needItem;
+            newMovement.NeedSpawn = needSpawn;
+            newMovement.Effect = effect;
+            newMovement.RequiredClass = requiredClass;
+
+            // 【安全修复】强力持久化防丢失
+            SEnvir.SaveSystem();
+
+            var dto = new MapMovementDto
+            {
+                Index = newMovement.Index,
+                SourceRegionIndex = sourceRegion.Index,
+                SourceRegionDescription = sourceRegion.Description ?? "",
+                DestinationRegionIndex = destRegion.Index,
+                DestinationRegionDescription = destRegion.Description ?? "",
+                Icon = newMovement.Icon.ToString(),
+                NeedItemIndex = newMovement.NeedItem?.Index,
+                NeedItemName = newMovement.NeedItem?.ItemName,
+                NeedSpawnIndex = newMovement.NeedSpawn?.Index,
+                NeedSpawnName = newMovement.NeedSpawn?.Monster?.MonsterName,
+                Effect = newMovement.Effect.ToString(),
+                RequiredClass = newMovement.RequiredClass.ToString()
+            };
+
+            return (true, "添加成功", dto);
+        }
+
+        /// <summary>
+        /// 更新传送点
+        /// </summary>
+        public (bool success, string message) UpdateMapMovement(int mapIndex, int movementId, UpdateMovementRequest request)
+        {
+            var movements = SEnvir.MovementInfoList;
+            if (movements == null) return (false, "传送点列表不可用");
+
+            MovementInfo? movement = null;
+            for (int i = 0; i < movements.Count; i++)
+            {
+                if (movements[i].Index == movementId)
+                {
+                    movement = movements[i];
+                    break;
+                }
+            }
+
+            if (movement == null) return (false, "传送点不存在");
+            if (movement.SourceRegion?.Map?.Index != mapIndex) return (false, "传送点不属于当前地图");
+
+            var regions = SEnvir.MapRegionList;
+            if (regions != null)
+            {
+                if (request.SourceRegionIndex.HasValue)
+                {
+                    MapRegion? newSource = null;
+                    for (int i = 0; i < regions.Count; i++)
+                    {
+                        if (regions[i].Index == request.SourceRegionIndex.Value)
+                        {
+                            newSource = regions[i];
+                            break;
+                        }
+                    }
+                    if (newSource != null)
+                    {
+                        if (newSource.Map?.Index != mapIndex) return (false, "源区域不属于当前地图");
+                        movement.SourceRegion = newSource;
+                    }
+                }
+
+                if (request.DestinationRegionIndex.HasValue)
+                {
+                    MapRegion? newDest = null;
+                    for (int i = 0; i < regions.Count; i++)
+                    {
+                        if (regions[i].Index == request.DestinationRegionIndex.Value)
+                        {
+                            newDest = regions[i];
+                            break;
+                        }
+                    }
+                    if (newDest != null)
+                    {
+                        movement.DestinationRegion = newDest;
+                    }
+                }
+            }
+
+            if (request.NeedItemIndex.HasValue)
+            {
+                ItemInfo? needItem = null;
+                if (request.NeedItemIndex.Value > 0)
+                {
+                    var items = SEnvir.ItemInfoList;
+                    if (items != null)
+                    {
+                        for (int i = 0; i < items.Count; i++)
+                        {
+                            if (items[i].Index == request.NeedItemIndex.Value)
+                            {
+                                needItem = items[i];
+                                break;
+                            }
+                        }
+                    }
+                }
+                movement.NeedItem = needItem;
+            }
+
+            if (request.NeedSpawnIndex.HasValue)
+            {
+                RespawnInfo? needSpawn = null;
+                if (request.NeedSpawnIndex.Value > 0)
+                {
+                    var spawns = SEnvir.RespawnInfoList;
+                    if (spawns != null)
+                    {
+                        for (int i = 0; i < spawns.Count; i++)
+                        {
+                            if (spawns[i].Index == request.NeedSpawnIndex.Value)
+                            {
+                                needSpawn = spawns[i];
+                                break;
+                            }
+                        }
+                    }
+                }
+                movement.NeedSpawn = needSpawn;
+            }
+
+            if (request.Icon != null)
+            {
+                if (Enum.TryParse<MapIcon>(request.Icon, out var icon))
+                {
+                    movement.Icon = icon;
+                }
+            }
+
+            if (request.Effect != null)
+            {
+                if (Enum.TryParse<MovementEffect>(request.Effect, out var effect))
+                {
+                    movement.Effect = effect;
+                }
+            }
+
+            if (request.RequiredClass != null)
+            {
+                if (Enum.TryParse<RequiredClass>(request.RequiredClass, out var requiredClass))
+                {
+                    movement.RequiredClass = requiredClass;
+                }
+            }
+
+            // 【安全修复】强力持久化防丢失
+            SEnvir.SaveSystem();
+
+            return (true, "更新成功");
+        }
+
+        /// <summary>
+        /// 删除传送点
+        /// </summary>
+        public (bool success, string message) DeleteMapMovement(int mapIndex, int movementId)
+        {
+            var movements = SEnvir.MovementInfoList;
+            if (movements == null) return (false, "传送点列表不可用");
+
+            MovementInfo? movement = null;
+            for (int i = 0; i < movements.Count; i++)
+            {
+                if (movements[i].Index == movementId)
+                {
+                    movement = movements[i];
+                    break;
+                }
+            }
+
+            if (movement == null) return (false, "传送点不存在");
+            if (movement.SourceRegion?.Map?.Index != mapIndex) return (false, "传送点不属于当前地图");
+
+            movement.Delete();
+
+            // 【安全修复】强力持久化防丢失
+            SEnvir.SaveSystem();
+
             return (true, "删除成功");
         }
 
@@ -4920,13 +5367,20 @@ namespace Server.WebApi.Services
 
     #endregion
 
+<<<<<<< HEAD
     #region Movement
 
     public class MovementInfoDto
+=======
+    #region Map Movements
+
+    public class MapMovementDto
+>>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
     {
         public int Index { get; set; }
         public int SourceRegionIndex { get; set; }
         public string SourceRegionDescription { get; set; } = "";
+<<<<<<< HEAD
         public string SourceMapName { get; set; } = "";
         public int SourcePointCount { get; set; }
         public List<string> SourcePoints { get; set; } = new List<string>();
@@ -4940,6 +5394,23 @@ namespace Server.WebApi.Services
         public string NeedItemName { get; set; } = "";
         public int NeedSpawnIndex { get; set; }
         public string NeedSpawnName { get; set; } = "";
+=======
+        /// <summary>起点区域的代表坐标 X（PointList 中心点，用于对照日志中的错误坐标）</summary>
+        public int? SourceRegionX { get; set; }
+        /// <summary>起点区域的代表坐标 Y</summary>
+        public int? SourceRegionY { get; set; }
+        public int DestinationRegionIndex { get; set; }
+        public string DestinationRegionDescription { get; set; } = "";
+        /// <summary>终点区域的代表坐标 X</summary>
+        public int? DestRegionX { get; set; }
+        /// <summary>终点区域的代表坐标 Y</summary>
+        public int? DestRegionY { get; set; }
+        public string Icon { get; set; } = "";
+        public int? NeedItemIndex { get; set; }
+        public string? NeedItemName { get; set; }
+        public int? NeedSpawnIndex { get; set; }
+        public string? NeedSpawnName { get; set; }
+>>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
         public string Effect { get; set; } = "";
         public string RequiredClass { get; set; } = "";
     }
@@ -4948,15 +5419,27 @@ namespace Server.WebApi.Services
     {
         public int SourceRegionIndex { get; set; }
         public int DestinationRegionIndex { get; set; }
+<<<<<<< HEAD
         public string? Icon { get; set; }
         public int NeedItemIndex { get; set; } = 0;
         public int NeedSpawnIndex { get; set; } = 0;
         public string? Effect { get; set; }
         public string? RequiredClass { get; set; }
+=======
+        public string Icon { get; set; } = "None";
+        public int? NeedItemIndex { get; set; }
+        public int? NeedSpawnIndex { get; set; }
+        public string Effect { get; set; } = "None";
+        public string RequiredClass { get; set; } = "All";
+>>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
     }
 
     public class UpdateMovementRequest
     {
+<<<<<<< HEAD
+=======
+        public int? SourceRegionIndex { get; set; }
+>>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
         public int? DestinationRegionIndex { get; set; }
         public string? Icon { get; set; }
         public int? NeedItemIndex { get; set; }

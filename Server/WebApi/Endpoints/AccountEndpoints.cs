@@ -297,6 +297,12 @@ namespace Server.WebApi.Endpoints
                 return Results.Forbid();
             }
 
+            // 【安全校验】防止大数值输入导致底层整数溢出清空玩家金币
+            if (request.Amount < -100_000_000 || request.Amount > 100_000_000)
+            {
+                return Results.BadRequest(new { message = "调整金额超限，允许的范围是 ±100,000,000" });
+            }
+
             var success = dataService.AddGameGold(email, request.Amount);
             if (success)
             {
@@ -335,6 +341,12 @@ namespace Server.WebApi.Endpoints
                 return Results.Forbid();
             }
 
+            // 【安全校验】防止大数值输入导致底层整数溢出清空玩家金币
+            if (request.Amount < -100_000_000 || request.Amount > 100_000_000)
+            {
+                return Results.BadRequest(new { message = "调整金额超限，允许的范围是 ±100,000,000" });
+            }
+
             var success = dataService.AddHuntGold(email, request.Amount);
             if (success)
             {
@@ -371,6 +383,12 @@ namespace Server.WebApi.Endpoints
             if (targetAccount.Identify >= currentIdentity && currentIdentity < AccountIdentity.SuperAdmin)
             {
                 return Results.Forbid();
+            }
+
+            // 【安全校验】防止大数值输入导致底层整数溢出清空玩家金币
+            if (request.Amount < -1_000_000_000 || request.Amount > 1_000_000_000)
+            {
+                return Results.BadRequest(new { message = "调整金额超限，允许的范围是 ±1,000,000,000" });
             }
 
             var success = dataService.AddNormalGold(email, request.Amount);

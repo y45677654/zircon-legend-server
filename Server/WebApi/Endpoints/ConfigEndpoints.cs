@@ -98,19 +98,28 @@ namespace Server.WebApi.Endpoints
                 return Results.BadRequest(new { message = "Key is required" });
             }
 
+            // 【新增审计】在修改配置发生前，读取 Server.ini 中当前保存的旧值
+            string oldValue = "未设定";
+            var currentSections = configService.GetConfigSections();
+            if (currentSections.TryGetValue(request.Section ?? "", out var keys) && keys.TryGetValue(request.Key, out var existingVal))
+            {
+                oldValue = existingVal;
+            }
+
             var (success, message) = configService.UpdateConfigValue(request.Section ?? "", request.Key, request.Value ?? "");
 
             if (success)
             {
-                // [后台更新单项配置] 详细记录管理员修改特定配置项的操作日志
+                // [后台更新单项配置] 详细记录管理员修改特定配置项的操作日志，实现完美的“旧值 -> 新值”审计可追溯
                 var adminEmail = JwtHelper.GetEmail(user);
-                Server.Envir.SEnvir.Log($"[后台更新单项配置] 管理员={adminEmail}, 区域={request.Section ?? "默认"}, 配置项={request.Key}, 新值={request.Value ?? "空"}");
+                Server.Envir.SEnvir.Log($"[后台更新单项配置] 管理员={adminEmail}, 区域={request.Section ?? "默认"}, 配置项={request.Key}, 变更对比: 【{oldValue}】 -> 【{request.Value ?? "空"}】");
 
                 return Results.Ok(new { message });
             }
 
             return Results.BadRequest(new { message });
         }
+
 
         /// <summary>
         /// Get runtime configuration values

@@ -82,8 +82,8 @@ namespace Server.Envir
 
         #region Logging
 
-        public static List<string> SystemLogHistory { get; } = new List<string>();
-        public static List<string> ChatLogHistory { get; } = new List<string>();
+        public static Queue<string> SystemLogHistory { get; } = new Queue<string>();
+        public static Queue<string> ChatLogHistory { get; } = new Queue<string>();
         public static readonly object LogHistoryLock = new object();
 
         public static ConcurrentQueue<string> DisplayLogs { get; set; } = new ConcurrentQueue<string>();
@@ -97,10 +97,10 @@ namespace Server.Envir
             // 将日志安全地存入系统日志历史缓冲区，容量上限 3000 条
             lock (LogHistoryLock)
             {
-                SystemLogHistory.Add(log);
+                SystemLogHistory.Enqueue(log);
                 if (SystemLogHistory.Count > 3000)
                 {
-                    SystemLogHistory.RemoveAt(0);
+                    SystemLogHistory.Dequeue();
                 }
             }
 
@@ -137,10 +137,10 @@ namespace Server.Envir
             // 将聊天日志安全地存入聊天日志历史缓冲区，容量上限 3000 条
             lock (LogHistoryLock)
             {
-                ChatLogHistory.Add(log);
+                ChatLogHistory.Enqueue(log);
                 if (ChatLogHistory.Count > 3000)
                 {
-                    ChatLogHistory.RemoveAt(0);
+                    ChatLogHistory.Dequeue();
                 }
             }
 
@@ -643,6 +643,7 @@ namespace Server.Envir
         #region Database
 
         private static Session Session;
+        public static bool HasSession => Session != null;
 
         public static DBCollection<MapInfo> MapInfoList;
         public static DBCollection<SafeZoneInfo> SafeZoneInfoList;
@@ -779,6 +780,10 @@ namespace Server.Envir
         }
 
         public static bool MonsterSieging { get; set; } = false;
+
+        // 【新增】管理员触发系统自重启控制标志。若为 true，程序在彻底退出主循环并保存好数据后，将重新拉起自身的新实例。
+        public static bool RequestRestart { get; set; } = false;
+
 
         public static LinkedList<CharacterInfo> Rankings { get; set; }
         public static HashSet<CharacterInfo> TopRankings { get; set; }
@@ -4617,7 +4622,7 @@ namespace Server.Envir
 
             return result;
         }
-        public static void SaveSystem() { Session.ForceSaveSystem(); }
+        public static void SaveSystem() { Session.SaveSystem(); }
         public static void SaveUserDatas() { Session.Save(true); }
 
         #region Password Encryption

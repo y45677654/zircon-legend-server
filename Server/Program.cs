@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Runtime;
 using Library;
 using Server.Envir;
@@ -109,6 +109,36 @@ WebApiStartup.Start();
 
 SEnvir.StartServer();
 
+// 【修复自重启死循环】当游戏主服务循环退出后，立即将 running 设为 false，以通知日志守护后台线程优雅退出
+running = false;
+
 while(!stop) Thread.Sleep(100);
 
-//ConfigReader.Save();
+// 【新增】系统安全自重启检测机制
+// 如果 SEnvir.RequestRestart 被设置为 true，说明管理员在后台网页触发了安全重启指令
+if (SEnvir.RequestRestart)
+{
+    try
+    {
+        // 1. 获取当前正在运行的 C# 服务器程序的完整绝对路径（即 zircon-legend-server.exe 的位置）
+        string exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+        
+        // 2. 构造进程启动信息，并设定使用系统 Shell 独立运行，从而拉起一个干净的全新服务器实例
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = exePath,
+            UseShellExecute = false // 【修复】关闭 ShellExecute 兼容 Linux/Docker 无界面环境
+        };
+        
+        // 3. 拉起新实例
+        System.Diagnostics.Process.Start(startInfo);
+        
+        SEnvir.Log($"[系统自重启] 成功拉起新进程实例，执行路径: {exePath}");
+    }
+    catch (Exception ex)
+    {
+        SEnvir.Log($"[系统自重启] 启动新进程时发生异常: {ex.Message}");
+    }
+}
+
+//ConfigReader.Save();

@@ -41,8 +41,8 @@ namespace Server.WebApi
                     WebRootPath = wwwrootPath
                 });
 
-                // 清理控制台日志提供程序，彻底静音 ASP.NET Core 内部框架的冗长调试输出，保证控制台干净
-                builder.Logging.ClearProviders();
+                // 【日志修复】移除完全静默，改为仅过滤 Microsoft 框架的 Info/Debug
+                builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 
                 // Configure Kestrel to listen on specified port
                 builder.WebHost.ConfigureKestrel(options =>
