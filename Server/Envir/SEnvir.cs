@@ -960,7 +960,7 @@ namespace Server.Envir
             {
                 if (info.Deleted || !info.Account.Activated 
                     || info.Account.Banned 
-                    || info.Account.EMailAddress == SuperAdmin) continue;
+                    || info.Account.Identify != AccountIdentity.Normal) continue;
 
                 info.RankingNode = Rankings.AddLast(info);
                 RankingSort(info, false);
@@ -1004,8 +1004,7 @@ namespace Server.Envir
         {
             if (character.Deleted
                 || !character.Account.Activated 
-                || character.Account.Banned 
-                || character.Account.EMailAddress == SuperAdmin)
+                || character.Account.Identify != AccountIdentity.Normal)
                 return;
 
             bool changed = false;
@@ -1069,8 +1068,8 @@ namespace Server.Envir
             {
                 if (cInfo.Deleted 
                     || !cInfo.Account.Activated 
-                    || cInfo.Account.Banned 
-                    || cInfo.Account.EMailAddress == SuperAdmin) 
+                    || cInfo.Account.Banned
+                    || cInfo.Account.Identify != AccountIdentity.Normal) 
                     continue;
 
                 switch (cInfo.Class)
