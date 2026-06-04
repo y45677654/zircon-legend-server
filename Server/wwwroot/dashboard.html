@@ -616,7 +616,7 @@
     async function handleGC() {
       try {
         const res = await api.post('/api/dashboard/gc');
-        alert(`系统垃圾清理与内存回收整理完毕！\n\n清理前内存: ${res.before}\n清理后内存: ${res.after}`);
+        alert(`系统垃圾清理与内存回收整理完毕！\n\n清理前内存: ${res.before}\n清理后内存: ${res.after}\n共释放内存: ${res.freed}`);
         await loadDashboardData();
       } catch (error) {
         alert('触发内存垃圾回收失败：' + error.message);

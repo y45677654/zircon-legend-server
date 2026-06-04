@@ -48,7 +48,8 @@ namespace Server.WebApi.Endpoints
             var onlinePlayers = dataService.GetOnlinePlayers();
 
             // 获取当前服务器进程的真实物理内存占用并折算为 MB (1MB = 1024 * 1024 字节)
-            double memoryMB = Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0;
+            double workingSetMB = Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0;
+            double gcHeapMB = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
 
             return Results.Ok(new DashboardStats
             {
@@ -60,7 +61,7 @@ namespace Server.WebApi.Endpoints
                 Uptime = FormatUptime(uptime),
                 
                 // 【新增数据项】物理内存占用与七大核心系统运行倍率
-                MemoryUsage = $"{memoryMB:F1} MB",
+                MemoryUsage = $"{gcHeapMB:F1} MB",
                 ExperienceRate = Config.ExperienceRate,
                 DropRate = Config.DropRate,
                 GoldRate = Config.GoldRate,
@@ -178,7 +179,7 @@ namespace Server.WebApi.Endpoints
             var adminEmail = JwtHelper.GetEmail(user);
 
             // 获取回收前的物理内存大小
-            double memBefore = Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0;
+            double gcBefore = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
 
             // 1. 强制触发 .NET 托管堆的全局垃圾清理并挂起线程直到终结器全部执行完毕（最高代 Gen2 强制同步整理，支持大对象堆压缩）
             // 采用纯托管模式垃圾清理，100% 绝对物理安全，彻底消除 Windows 蓝屏/系统重启隐患
@@ -187,16 +188,18 @@ namespace Server.WebApi.Endpoints
             GC.Collect(2, GCCollectionMode.Forced, true, true);
 
             // 获取回收后的物理内存大小
-            double memAfter = Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0;
+            double gcAfter = GC.GetTotalMemory(false) / 1024.0 / 1024.0;
+            double gcFreed = gcBefore - gcAfter;
 
             // 详细写入前后内存对比的日志，方便运维追踪资源释放效果
-            SEnvir.Log($"[系统运维操作] 管理员={adminEmail}, 触发了系统内存垃圾回收。清理前内存={memBefore:F1}MB, 清理后内存={memAfter:F1}MB");
+            SEnvir.Log($"[系统运维操作] 管理员={adminEmail}, 触发了系统内存清理。清理前={gcBefore:F1}MB, 清理后={gcAfter:F1}MB (释放了 {gcFreed:F1}MB)");
 
             return Results.Ok(new
             {
                 message = "垃圾回收资源清理完毕（已采用纯托管安全模式）。",
-                before = $"{memBefore:F1} MB",
-                after = $"{memAfter:F1} MB"
+                before = $"{gcBefore:F1} MB",
+                after = $"{gcAfter:F1} MB",
+                freed = $"{gcFreed:F1} MB"
             });
         }
 

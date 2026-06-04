@@ -57,6 +57,37 @@ namespace Server.WebApi.Services
         private static readonly object _questUpdateLock = new object();
 
         /// <summary>
+        /// 【防抖保存】用于合并 WebAPI 触发的高频 SaveSystem 调用，避免短时间内重复序列化造成内存峰值
+        /// </summary>
+        private static readonly object _saveDebouncelock = new object();
+        private static System.Threading.Timer? _saveDebounceTimer = null;
+        private const int SaveDebounceMs = 800; // 800ms 内多次调用只触发一次实际保存
+
+        /// <summary>
+        /// 防抖触发系统数据保存。管理后台短时间内的连续编辑操作将被合并，
+        /// 最后一次操作完成 800ms 后才真正执行 SaveSystem，避免每次操作都序列化全量数据。
+        /// </summary>
+        private static void DebouncedSaveSystem()
+        {
+            lock (_saveDebouncelock)
+            {
+                // 取消上一次已计划但尚未执行的保存，重新开始计时
+                _saveDebounceTimer?.Dispose();
+                _saveDebounceTimer = new System.Threading.Timer(_ =>
+                {
+                    try
+                    {
+                        SEnvir.SaveSystem();
+                    }
+                    catch (Exception ex)
+                    {
+                        SEnvir.Log($"[防抖保存] SaveSystem 执行异常: {ex.Message}");
+                    }
+                }, null, SaveDebounceMs, System.Threading.Timeout.Infinite);
+            }
+        }
+
+        /// <summary>
         /// Get server start time
         /// </summary>
         public DateTime ServerStartTime { get; } = DateTime.UtcNow;
@@ -843,7 +874,7 @@ namespace Server.WebApi.Services
                 if (request.BlockMonsterDrop.HasValue) item.BlockMonsterDrop = request.BlockMonsterDrop.Value;
 
                 // 【安全补齐】更新物品后执行落盘保存，防止服务器重启或崩服回档
-                SEnvir.SaveSystem();
+                DebouncedSaveSystem();
 
                 return (true, "物品更新成功");
             }
@@ -916,7 +947,7 @@ namespace Server.WebApi.Services
                 newItem.BlockMonsterDrop = request.BlockMonsterDrop;
 
                 // 【安全补齐】创建新物品后执行系统保存落盘
-                SEnvir.SaveSystem();
+                DebouncedSaveSystem();
 
                 SEnvir.Log($"创建新物品: Index={newItem.Index}, Name={newItem.ItemName}, Type={newItem.ItemType}");
 
@@ -2120,8 +2151,8 @@ namespace Server.WebApi.Services
                     }
                 }
 
-                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db，避免全服保存卡顿
-                SEnvir.SaveSystem();
+                // 【防抖保存】静态系统配置数据保存，合并短时间内的重复调用，避免全服保存卡顿
+                DebouncedSaveSystem();
 
                 return (true, "任务创建成功", GetQuestDetail(newQuest.Index));
             }
@@ -2324,8 +2355,8 @@ namespace Server.WebApi.Services
                     }
                 }
 
-                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db
-                SEnvir.SaveSystem();
+                // 【防抖保存】静态系统配置数据保存，合并短时间内的重复调用
+                DebouncedSaveSystem();
 
                 return (true, "任务更新成功");
             }
@@ -2369,8 +2400,8 @@ namespace Server.WebApi.Services
 
                 quest.Delete();
 
-                // 【安全修复】静态系统配置数据保存，使用 SaveSystem 保存到 System.db
-                SEnvir.SaveSystem();
+                // 【防抖保存】静态系统配置数据保存，合并短时间内的重复调用
+                DebouncedSaveSystem();
 
                 return (true, "删除成功");
             }
@@ -2497,8 +2528,8 @@ namespace Server.WebApi.Services
                 newStoreItem.Available = request.Available;
                 newStoreItem.Duration = request.Duration;
 
-                // 【安全修复】商城配置更新保存至 System.db
-                SEnvir.SaveSystem();
+                // 【防抖保存】商城配置更新保存至 System.db，合并短时间内的重复调用
+                DebouncedSaveSystem();
 
                 return (true, "商城商品添加成功", GetStoreItemDetail(newStoreItem.Index));
             }
@@ -2534,8 +2565,8 @@ namespace Server.WebApi.Services
                 if (request.Available.HasValue) storeItem.Available = request.Available.Value;
                 if (request.Duration.HasValue) storeItem.Duration = request.Duration.Value;
 
-                // 【安全修复】商城配置更新保存至 System.db
-                SEnvir.SaveSystem();
+                // 【防抖保存】商城配置更新保存至 System.db，合并短时间内的重复调用
+                DebouncedSaveSystem();
 
                 return (true, "商城商品更新成功");
             }
@@ -2567,7 +2598,7 @@ namespace Server.WebApi.Services
                 storeItem.Delete();
 
                 // 【安全修复】商城配置更新保存至 System.db
-                SEnvir.SaveSystem();
+                DebouncedSaveSystem();
 
                 return (true, "删除成功");
             }
@@ -2840,8 +2871,8 @@ namespace Server.WebApi.Services
             if (request.ExperienceRate.HasValue) mapInfo.ExperienceRate = request.ExperienceRate.Value;
             if (request.GoldRate.HasValue) mapInfo.GoldRate = request.GoldRate.Value;
 
-            // 【安全修复】将地图静态更新保存至 System.db，修复原版重启丢失缺陷且避免卡顿
-            SEnvir.SaveSystem();
+            // 【防抖保存】将地图静态更新保存至 System.db，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "地图更新成功");
         }
@@ -3085,8 +3116,8 @@ namespace Server.WebApi.Services
                     UpdateMonsterStats(monster, request.Stats);
                 }
 
-                // 【安全补齐】修改怪物配置后强力保存系统配置数据库，防止重启回档
-                SEnvir.SaveSystem();
+                // 【防抖保存】修改怪物配置后延迟合并保存，防止重启回档
+                DebouncedSaveSystem();
 
                 return (true, "怪物更新成功");
             }
@@ -3612,8 +3643,8 @@ namespace Server.WebApi.Services
                 EasterEvent = newDrop.EasterEvent
             };
 
-            // 【安全补齐】保存掉落表配置，防止重启丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】保存掉落表配置，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "添加成功", dto);
         }
@@ -3650,8 +3681,8 @@ namespace Server.WebApi.Services
             if (request.PartOnly.HasValue) drop.PartOnly = request.PartOnly.Value;
             if (request.EasterEvent.HasValue) drop.EasterEvent = request.EasterEvent.Value;
 
-            // 【安全补齐】保存掉落表配置，防止重启丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】保存掉落表配置，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "更新成功");
         }
@@ -3695,8 +3726,8 @@ namespace Server.WebApi.Services
                 drop.Delete();
                 SEnvir.Log($"删除掉落记录成功: DropId={dropId}");
 
-                // 【安全补齐】系统配置数据库同步保存删除操作
-                SEnvir.SaveSystem();
+                // 【防抖保存】系统配置数据库同步保存删除操作，合并短时间内的重复调用
+                DebouncedSaveSystem();
 
                 return (true, "删除成功");
             }
@@ -3838,8 +3869,8 @@ namespace Server.WebApi.Services
                 EasterEventChance = newRespawn.EasterEventChance
             };
 
-            // 【安全补齐】将刷怪点新增配置真正保存到 System.db
-            SEnvir.SaveSystem();
+            // 【防抖保存】将刷怪点新增配置延迟合并保存到 System.db
+            DebouncedSaveSystem();
 
             return (true, "添加成功", dto);
         }
@@ -3918,8 +3949,8 @@ namespace Server.WebApi.Services
             if (request.EasterEventChance.HasValue) respawn.EasterEventChance = request.EasterEventChance.Value;
             if (request.EventSpawn.HasValue) respawn.EventSpawn = request.EventSpawn.Value;
 
-            // 【安全补齐】保存系统数据库，确保刷怪点修改不丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】保存系统数据库，确保刷怪点修改不丢失，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "更新成功");
         }
@@ -3952,8 +3983,8 @@ namespace Server.WebApi.Services
 
             respawn.Delete();
 
-            // 【安全补齐】保存系统数据库，确保刷怪点删除落盘
-            SEnvir.SaveSystem();
+            // 【防抖保存】保存系统数据库，确保刷怪点删除落盘，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "删除成功");
         }
@@ -4129,8 +4160,8 @@ namespace Server.WebApi.Services
             newMovement.Effect = effect;
             newMovement.RequiredClass = requiredClass;
 
-            // 【安全修复】强力持久化防丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】持久化防丢失，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             var dto = new MapMovementDto
             {
@@ -4277,8 +4308,8 @@ namespace Server.WebApi.Services
                 }
             }
 
-            // 【安全修复】强力持久化防丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】持久化防丢失，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "更新成功");
         }
@@ -4306,8 +4337,8 @@ namespace Server.WebApi.Services
 
             movement.Delete();
 
-            // 【安全修复】强力持久化防丢失
-            SEnvir.SaveSystem();
+            // 【防抖保存】持久化防丢失，合并短时间内的重复调用
+            DebouncedSaveSystem();
 
             return (true, "删除成功");
         }
