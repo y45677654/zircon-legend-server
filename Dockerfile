@@ -16,7 +16,7 @@ COPY ["Server/Server.csproj", "Server/"]
 COPY . .
 
 # 临时修改项目引用：从 ProjectReference 改为 Reference（使用预编译 DLL）
-RUN sed -i 's|<ProjectReference Include="\.\.\\Library\\Library\\Library\.csproj" />|<Reference Include="Library"><HintPath>../Debug/Library/Library.dll</HintPath></Reference>|' /src/Server/Server.csproj
+RUN sed -i 's|<ProjectReference Include="\.\.\\Library\\Library\\Library\.csproj" />|<Reference Include="Library"><HintPath>../Output/Release/Library.dll</HintPath></Reference>|' /src/Server/Server.csproj
 
 # 禁用 Windows 特定的 PostBuild 事件
 RUN sed -i '/<Target Name="PostBuild"/,/<\/Target>/d' /src/Server/Server.csproj

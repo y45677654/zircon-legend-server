@@ -1,0 +1,9 @@
+.git
+.vs
+.github
+Output/Debug
+Output/Release/datas
+Output/Release/net8.0
+**/obj
+**/bin
+Server/datas
