@@ -636,7 +636,11 @@
       }
     }
 
+    let isSubmitting = false;
+
     async function submitCurrencyChange() {
+      if (isSubmitting) return;
+      
       const email = document.getElementById('currencyEmail').value;
       const action = document.querySelector('input[name="currencyAction"]:checked').value;
       const amountStr = document.getElementById('currencyAmount').value;
@@ -664,6 +668,12 @@
         currencyName = '金币';
       }
 
+      isSubmitting = true;
+      const submitBtn = document.getElementById('btnCurrencySubmit');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = '处理中...';
+      submitBtn.disabled = true;
+
       try {
         await api.put(`/api/accounts/${encodeURIComponent(email)}/${urlPath}`, { amount });
         alert(`${currencyName}调整成功`);
@@ -671,6 +681,10 @@
         await loadAccounts();
       } catch (error) {
         alert('操作失败: ' + error.message);
+      } finally {
+        isSubmitting = false;
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
     }
 

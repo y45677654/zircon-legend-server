@@ -2228,7 +2228,8 @@ namespace Server.Envir
             else
                 chance = Config.全局极品几率;
 
-            if (Random.Next(chance) == 0)
+            // [防溢出修复] 检查 chance 必须大于0，避免 Random.Next(0) 或负数抛出 ArgumentOutOfRangeException 导致主线程崩溃
+            if (chance > 0 && Random.Next(chance) == 0)
             {
                 switch (info.ItemType)
                 {

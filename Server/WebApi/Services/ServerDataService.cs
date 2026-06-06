@@ -4345,337 +4345,6 @@ namespace Server.WebApi.Services
 
         #endregion
 
-        #region Movement Management
-
-        /// <summary>
-        /// Get movements for a map
-        /// </summary>
-        public List<MovementInfoDto> GetMapMovements(int mapIndex)
-        {
-            var movements = SEnvir.MovementInfoList;
-            if (movements == null) return new List<MovementInfoDto>();
-
-            var result = new List<MovementInfoDto>();
-            for (int i = 0; i < movements.Count; i++)
-            {
-                var movement = movements[i];
-                if (movement.SourceRegion?.Map?.Index == mapIndex)
-                {
-                    var dto = new MovementInfoDto
-                    {
-                        Index = movement.Index,
-                        SourceRegionIndex = movement.SourceRegion?.Index ?? 0,
-                        SourceRegionDescription = movement.SourceRegion?.Description ?? "",
-                        SourceMapName = movement.SourceRegion?.Map?.Description ?? "",
-                        DestinationRegionIndex = movement.DestinationRegion?.Index ?? 0,
-                        DestinationRegionDescription = movement.DestinationRegion?.Description ?? "",
-                        DestinationMapName = movement.DestinationRegion?.Map?.Description ?? "",
-                        Icon = movement.Icon.ToString(),
-                        NeedItemIndex = movement.NeedItem?.Index ?? 0,
-                        NeedItemName = movement.NeedItem?.ItemName ?? "",
-                        NeedSpawnIndex = movement.NeedSpawn?.Index ?? 0,
-                        NeedSpawnName = movement.NeedSpawn?.MonsterName ?? "",
-                        Effect = movement.Effect.ToString(),
-                        RequiredClass = movement.RequiredClass.ToString()
-                    };
-
-                    // 填充源区域坐标信息
-                    if (movement.SourceRegion != null)
-                    {
-                        var srcWidth = 0;
-                        if (movement.SourceRegion.Map != null)
-                        {
-                            var srcMap = SEnvir.GetMap(movement.SourceRegion.Map);
-                            srcWidth = srcMap?.Width ?? 0;
-                        }
-                        movement.SourceRegion.CreatePoints(srcWidth);
-                        if (movement.SourceRegion.PointList != null)
-                        {
-                            dto.SourcePointCount = movement.SourceRegion.PointList.Count;
-                            var displayPoints = movement.SourceRegion.PointList.Take(20).Select(p => $"({p.X},{p.Y})").ToList();
-                            dto.SourcePoints = displayPoints;
-                            if (movement.SourceRegion.PointList.Count > 20)
-                            {
-                                dto.SourcePoints.Add($"...还有{movement.SourceRegion.PointList.Count - 20}个点");
-                            }
-                        }
-                    }
-
-                    // 填充目标区域坐标信息
-                    if (movement.DestinationRegion != null)
-                    {
-                        var destWidth = 0;
-                        if (movement.DestinationRegion.Map != null)
-                        {
-                            var destMap = SEnvir.GetMap(movement.DestinationRegion.Map);
-                            destWidth = destMap?.Width ?? 0;
-                        }
-                        movement.DestinationRegion.CreatePoints(destWidth);
-                        if (movement.DestinationRegion.PointList != null)
-                        {
-                            dto.DestinationPointCount = movement.DestinationRegion.PointList.Count;
-                            var displayPoints = movement.DestinationRegion.PointList.Take(20).Select(p => $"({p.X},{p.Y})").ToList();
-                            dto.DestinationPoints = displayPoints;
-                            if (movement.DestinationRegion.PointList.Count > 20)
-                            {
-                                dto.DestinationPoints.Add($"...还有{movement.DestinationRegion.PointList.Count - 20}个点");
-                            }
-                        }
-                    }
-
-                    result.Add(dto);
-                }
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// Add movement to map
-        /// </summary>
-        public (bool success, string message, MovementInfoDto? movement) AddMapMovement(int mapIndex, AddMovementRequest request)
-        {
-            var movementList = SEnvir.MovementInfoList;
-            if (movementList == null) return (false, "链接列表不可用", null);
-
-            // Find source region
-            var sourceRegion = FindMapRegion(request.SourceRegionIndex, mapIndex);
-            if (sourceRegion == null) return (false, "源区域不存在或不属于该地图", null);
-
-            // Find destination region (can be on different map)
-            var destinationRegion = FindMapRegion(request.DestinationRegionIndex, null);
-            if (destinationRegion == null) return (false, "目标区域不存在", null);
-
-            var movement = movementList.CreateNewObject();
-            movement.SourceRegion = sourceRegion;
-            movement.DestinationRegion = destinationRegion;
-
-            // Set optional fields
-            if (!string.IsNullOrWhiteSpace(request.Icon) && Enum.TryParse<MapIcon>(request.Icon, out var icon))
-            {
-                movement.Icon = icon;
-            }
-            if (!string.IsNullOrWhiteSpace(request.Effect) && Enum.TryParse<MovementEffect>(request.Effect, out var effect))
-            {
-                movement.Effect = effect;
-            }
-            if (!string.IsNullOrWhiteSpace(request.RequiredClass) && Enum.TryParse<RequiredClass>(request.RequiredClass, out var requiredClass))
-            {
-                movement.RequiredClass = requiredClass;
-            }
-
-            // Set optional item requirement
-            if (request.NeedItemIndex > 0)
-            {
-                var items = SEnvir.ItemInfoList;
-                if (items != null)
-                {
-                    for (int i = 0; i < items.Count; i++)
-                    {
-                        if (items[i].Index == request.NeedItemIndex)
-                        {
-                            movement.NeedItem = items[i];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Set optional spawn requirement
-            if (request.NeedSpawnIndex > 0)
-            {
-                var spawns = SEnvir.RespawnInfoList;
-                if (spawns != null)
-                {
-                    for (int i = 0; i < spawns.Count; i++)
-                    {
-                        if (spawns[i].Index == request.NeedSpawnIndex)
-                        {
-                            movement.NeedSpawn = spawns[i];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            return (true, "添加成功", new MovementInfoDto
-            {
-                Index = movement.Index,
-                SourceRegionIndex = movement.SourceRegion?.Index ?? 0,
-                SourceRegionDescription = movement.SourceRegion?.Description ?? "",
-                SourceMapName = movement.SourceRegion?.Map?.Description ?? "",
-                DestinationRegionIndex = movement.DestinationRegion?.Index ?? 0,
-                DestinationRegionDescription = movement.DestinationRegion?.Description ?? "",
-                DestinationMapName = movement.DestinationRegion?.Map?.Description ?? "",
-                Icon = movement.Icon.ToString(),
-                NeedItemIndex = movement.NeedItem?.Index ?? 0,
-                NeedItemName = movement.NeedItem?.ItemName ?? "",
-                NeedSpawnIndex = movement.NeedSpawn?.Index ?? 0,
-                NeedSpawnName = movement.NeedSpawn?.MonsterName ?? "",
-                Effect = movement.Effect.ToString(),
-                RequiredClass = movement.RequiredClass.ToString()
-            });
-        }
-
-        /// <summary>
-        /// Update map movement
-        /// </summary>
-        public (bool success, string message) UpdateMapMovement(int mapIndex, int movementId, UpdateMovementRequest request)
-        {
-            var movementList = SEnvir.MovementInfoList;
-            if (movementList == null) return (false, "链接列表不可用");
-
-            MovementInfo? movement = null;
-            for (int i = 0; i < movementList.Count; i++)
-            {
-                if (movementList[i].Index == movementId)
-                {
-                    movement = movementList[i];
-                    break;
-                }
-            }
-
-            if (movement == null) return (false, "链接信息不存在");
-
-            // Verify movement belongs to map
-            if (movement.SourceRegion?.Map?.Index != mapIndex)
-            {
-                return (false, "链接信息不属于该地图");
-            }
-
-            // Update destination region
-            if (request.DestinationRegionIndex.HasValue)
-            {
-                var destinationRegion = FindMapRegion(request.DestinationRegionIndex.Value, null);
-                if (destinationRegion == null) return (false, "目标区域不存在");
-                movement.DestinationRegion = destinationRegion;
-            }
-
-            // Update optional fields
-            if (!string.IsNullOrWhiteSpace(request.Icon) && Enum.TryParse<MapIcon>(request.Icon, out var icon))
-            {
-                movement.Icon = icon;
-            }
-            if (!string.IsNullOrWhiteSpace(request.Effect) && Enum.TryParse<MovementEffect>(request.Effect, out var effect))
-            {
-                movement.Effect = effect;
-            }
-            if (!string.IsNullOrWhiteSpace(request.RequiredClass) && Enum.TryParse<RequiredClass>(request.RequiredClass, out var requiredClass))
-            {
-                movement.RequiredClass = requiredClass;
-            }
-
-            // Update item requirement
-            if (request.NeedItemIndex.HasValue)
-            {
-                if (request.NeedItemIndex.Value <= 0)
-                {
-                    movement.NeedItem = null;
-                }
-                else
-                {
-                    var items = SEnvir.ItemInfoList;
-                    if (items != null)
-                    {
-                        for (int i = 0; i < items.Count; i++)
-                        {
-                            if (items[i].Index == request.NeedItemIndex.Value)
-                            {
-                                movement.NeedItem = items[i];
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Update spawn requirement
-            if (request.NeedSpawnIndex.HasValue)
-            {
-                if (request.NeedSpawnIndex.Value <= 0)
-                {
-                    movement.NeedSpawn = null;
-                }
-                else
-                {
-                    var spawns = SEnvir.RespawnInfoList;
-                    if (spawns != null)
-                    {
-                        for (int i = 0; i < spawns.Count; i++)
-                        {
-                            if (spawns[i].Index == request.NeedSpawnIndex.Value)
-                            {
-                                movement.NeedSpawn = spawns[i];
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return (true, "更新成功");
-        }
-
-        /// <summary>
-        /// Delete map movement
-        /// </summary>
-        public (bool success, string message) DeleteMapMovement(int mapIndex, int movementId)
-        {
-            var movementList = SEnvir.MovementInfoList;
-            if (movementList == null) return (false, "链接列表不可用");
-
-            MovementInfo? movement = null;
-            for (int i = 0; i < movementList.Count; i++)
-            {
-                if (movementList[i].Index == movementId)
-                {
-                    movement = movementList[i];
-                    break;
-                }
-            }
-
-            if (movement == null) return (false, "链接信息不存在");
-
-            // Verify movement belongs to map
-            if (movement.SourceRegion?.Map?.Index != mapIndex)
-            {
-                return (false, "链接信息不属于该地图");
-            }
-
-            movement.Delete();
-            return (true, "删除成功");
-        }
-
-        /// <summary>
-        /// Helper method to find map region
-        /// </summary>
-        private MapRegion? FindMapRegion(int regionIndex, int? mapIndexFilter)
-        {
-            var regions = SEnvir.MapRegionList;
-            if (regions == null) return null;
-
-            for (int i = 0; i < regions.Count; i++)
-            {
-                if (regions[i].Index == regionIndex)
-                {
-                    // If map filter is provided, check that region belongs to that map
-                    if (mapIndexFilter.HasValue)
-                    {
-                        if (regions[i].Map?.Index == mapIndexFilter.Value)
-                        {
-                            return regions[i];
-                        }
-                    }
-                    else
-                    {
-                        // No map filter, return any region with matching index
-                        return regions[i];
-                    }
-                }
-            }
-            return null;
-        }
-
-        #endregion
 
         #region Helpers
 
@@ -4712,6 +4381,7 @@ namespace Server.WebApi.Services
         public DateTime LastLogin { get; set; }
         public string? LastIP { get; set; }
         public int CharacterCount { get; set; }
+        public long Gold { get; set; }
         public int GameGold { get; set; }
         public int HuntGold { get; set; }
     }
@@ -5398,34 +5068,13 @@ namespace Server.WebApi.Services
 
     #endregion
 
-<<<<<<< HEAD
-    #region Movement
-
-    public class MovementInfoDto
-=======
     #region Map Movements
 
     public class MapMovementDto
->>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
     {
         public int Index { get; set; }
         public int SourceRegionIndex { get; set; }
         public string SourceRegionDescription { get; set; } = "";
-<<<<<<< HEAD
-        public string SourceMapName { get; set; } = "";
-        public int SourcePointCount { get; set; }
-        public List<string> SourcePoints { get; set; } = new List<string>();
-        public int DestinationRegionIndex { get; set; }
-        public string DestinationRegionDescription { get; set; } = "";
-        public string DestinationMapName { get; set; } = "";
-        public int DestinationPointCount { get; set; }
-        public List<string> DestinationPoints { get; set; } = new List<string>();
-        public string Icon { get; set; } = "";
-        public int NeedItemIndex { get; set; }
-        public string NeedItemName { get; set; } = "";
-        public int NeedSpawnIndex { get; set; }
-        public string NeedSpawnName { get; set; } = "";
-=======
         /// <summary>起点区域的代表坐标 X（PointList 中心点，用于对照日志中的错误坐标）</summary>
         public int? SourceRegionX { get; set; }
         /// <summary>起点区域的代表坐标 Y</summary>
@@ -5441,7 +5090,6 @@ namespace Server.WebApi.Services
         public string? NeedItemName { get; set; }
         public int? NeedSpawnIndex { get; set; }
         public string? NeedSpawnName { get; set; }
->>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
         public string Effect { get; set; } = "";
         public string RequiredClass { get; set; } = "";
     }
@@ -5450,27 +5098,16 @@ namespace Server.WebApi.Services
     {
         public int SourceRegionIndex { get; set; }
         public int DestinationRegionIndex { get; set; }
-<<<<<<< HEAD
-        public string? Icon { get; set; }
-        public int NeedItemIndex { get; set; } = 0;
-        public int NeedSpawnIndex { get; set; } = 0;
-        public string? Effect { get; set; }
-        public string? RequiredClass { get; set; }
-=======
         public string Icon { get; set; } = "None";
         public int? NeedItemIndex { get; set; }
         public int? NeedSpawnIndex { get; set; }
         public string Effect { get; set; } = "None";
         public string RequiredClass { get; set; } = "All";
->>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
     }
 
     public class UpdateMovementRequest
     {
-<<<<<<< HEAD
-=======
         public int? SourceRegionIndex { get; set; }
->>>>>>> c335a2c (fix(server): 彻底修复跨线程数据竞争与O(N)性能瓶颈，重构服务器生命周期管控)
         public int? DestinationRegionIndex { get; set; }
         public string? Icon { get; set; }
         public int? NeedItemIndex { get; set; }

@@ -42,10 +42,7 @@ namespace Server.WebApi.Endpoints
             group.MapPut("/maps/{index:int}", UpdateMap);
             group.MapPost("/maps/teleport", TeleportPlayer);
             group.MapPost("/maps/{index:int}/clear-monsters", ClearMonstersOnMap);
-            group.MapGet("/maps/{index:int}/movements", GetMapMovements);
-            group.MapPost("/maps/{index:int}/movements", AddMapMovement);
-            group.MapPut("/maps/{index:int}/movements/{movementId:int}", UpdateMapMovement);
-            group.MapDelete("/maps/{index:int}/movements/{movementId:int}", DeleteMapMovement);
+
 
             // Monsters
             group.MapGet("/monsters", GetMonsters);
