@@ -1056,6 +1056,11 @@
           url += `&search=${encodeURIComponent(searchQuery)}`;
         }
 
+        const typeFilter = document.getElementById('typeFilter').value;
+        if (typeFilter) {
+          url += `&type=${encodeURIComponent(typeFilter)}`;
+        }
+
         const data = await api.get(url);
         totalItems = data.total || 0;
         totalPages = data.totalPages || 0;
@@ -1088,20 +1093,13 @@
 
     function renderItems(items) {
       const tbody = document.getElementById('itemsTable');
-      const typeFilter = document.getElementById('typeFilter').value;
 
-      // Client-side type filter
-      let filteredItems = items;
-      if (typeFilter) {
-        filteredItems = items.filter(item => item.type === typeFilter);
-      }
-
-      if (filteredItems.length === 0) {
+      if (items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-tertiary);">暂无物品数据</td></tr>';
         return;
       }
 
-      tbody.innerHTML = filteredItems.map(item => `
+      tbody.innerHTML = items.map(item => `
         <tr>
           <td><code>${item.index}</code></td>
           <td><strong>${escapeHtml(item.name)}</strong></td>
