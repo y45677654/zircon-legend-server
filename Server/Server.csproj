@@ -84,10 +84,6 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <!-- 编译后复制 datas 目录到输出目录 -->
-  <ItemGroup>
-    <None Include="datas\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="datas" />
-  </ItemGroup>
 
   <!-- 复制 wwwroot 静态文件到输出目录（如果存在） -->
   <ItemGroup>

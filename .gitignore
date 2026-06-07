@@ -126,4 +126,6 @@ Server/id_ed25519a.pub
 [Bb]uild_All/
 compile/
 *.DotSettings.user
+*.ini
+*.db
 *.db-journal
