@@ -275,7 +275,7 @@ namespace Server.WebApi.Endpoints
         /// <summary>
         /// 调整账号元宝数量（仅限 Admin 级以上账号）
         /// </summary>
-        private static async Task<IResult> ChangeGameGold(string email, ChangeGameGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
+        private static IResult ChangeGameGold(string email, ChangeGameGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
         {
             if (!JwtHelper.HasMinimumIdentity(user, AccountIdentity.Admin))
             {
@@ -303,7 +303,7 @@ namespace Server.WebApi.Endpoints
                 return Results.BadRequest(new { message = "调整金额超限，允许的范围是 ±2,000,000,000" });
             }
 
-            var success = await dataService.AddGameGold(email, (int)request.Amount);
+            var success = dataService.AddGameGold(email, (int)request.Amount);
             if (success)
             {
                 // [后台调整元宝] 记录管理员从Web后台调整玩家元宝的操作日志
@@ -319,7 +319,7 @@ namespace Server.WebApi.Endpoints
         /// <summary>
         /// 调整账号猎币数量（仅限 Admin 级以上账号）
         /// </summary>
-        private static async Task<IResult> ChangeHuntGold(string email, ChangeHuntGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
+        private static IResult ChangeHuntGold(string email, ChangeHuntGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
         {
             if (!JwtHelper.HasMinimumIdentity(user, AccountIdentity.Admin))
             {
@@ -347,7 +347,7 @@ namespace Server.WebApi.Endpoints
                 return Results.BadRequest(new { message = "调整金额超限，允许的范围是 ±2,000,000,000" });
             }
 
-            var success = await dataService.AddHuntGold(email, (int)request.Amount);
+            var success = dataService.AddHuntGold(email, (int)request.Amount);
             if (success)
             {
                 // [后台调整猎币] 记录管理员从Web后台调整玩家猎币的操作日志
@@ -363,7 +363,7 @@ namespace Server.WebApi.Endpoints
         /// <summary>
         /// 调整账号普通金币数量（仅限 Admin 级以上账号）
         /// </summary>
-        private static async Task<IResult> ChangeNormalGold(string email, ChangeNormalGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
+        private static IResult ChangeNormalGold(string email, ChangeNormalGoldRequest request, ClaimsPrincipal user, ServerDataService dataService)
         {
             if (!JwtHelper.HasMinimumIdentity(user, AccountIdentity.Admin))
             {
@@ -385,7 +385,7 @@ namespace Server.WebApi.Endpoints
                 return Results.Forbid();
             }
 
-            var success = await dataService.AddNormalGold(email, request.Amount);
+            var success = dataService.AddNormalGold(email, request.Amount);
             if (success)
             {
                 // [后台调整金币] 记录管理员从Web后台调整玩家金币的操作日志
