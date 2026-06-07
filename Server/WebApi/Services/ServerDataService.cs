@@ -543,7 +543,7 @@ namespace Server.WebApi.Services
                     // 商业中性红字通告
                     if (amount > 0)
                     {
-                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 元宝！", MessageType.System);
+                        player.Connection?.ReceiveChat($"系统成功为你的账户存入 {amount} 元宝！", MessageType.System);
                     }
                     else if (amount < 0)
                     {
@@ -581,7 +581,7 @@ namespace Server.WebApi.Services
                     // 商业中性红字通告
                     if (amount > 0)
                     {
-                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 猎币！", MessageType.System);
+                        player.Connection?.ReceiveChat($"系统成功为你的账户存入 {amount} 猎币！", MessageType.System);
                     }
                     else if (amount < 0)
                     {
@@ -619,7 +619,7 @@ namespace Server.WebApi.Services
                     // 商业中性红字通告
                     if (amount > 0)
                     {
-                        player.Connection?.ReceiveChat($"系统成功存入你 {amount} 金币！", MessageType.System);
+                        player.Connection?.ReceiveChat($"系统成功为你的账户存入 {amount} 金币！", MessageType.System);
                     }
                     else if (amount < 0)
                     {
@@ -3782,6 +3782,7 @@ namespace Server.WebApi.Services
                         MonsterName = respawn.Monster?.MonsterName ?? "",
                         RegionIndex = respawn.Region?.Index,
                         RegionDescription = respawn.Region?.Description ?? "",
+                        RegionPointCount = respawn.Region?.PointList?.Count ?? 0,
                         Delay = respawn.Delay,
                         Count = respawn.Count,
                         DropSet = respawn.DropSet,
@@ -4053,10 +4054,12 @@ namespace Server.WebApi.Services
                         SourceRegionDescription = movement.SourceRegion?.Description ?? "",
                         SourceRegionX = srcX,
                         SourceRegionY = srcY,
+                        SourceRegionPointCount = movement.SourceRegion?.PointList?.Count,
                         DestinationRegionIndex = movement.DestinationRegion?.Index ?? 0,
                         DestinationRegionDescription = movement.DestinationRegion?.Description ?? "",
                         DestRegionX = dstX,
                         DestRegionY = dstY,
+                        DestRegionPointCount = movement.DestinationRegion?.PointList?.Count,
                         Icon = movement.Icon.ToString(),
                         NeedItemIndex = movement.NeedItem?.Index,
                         NeedItemName = movement.NeedItem?.ItemName,
@@ -4918,6 +4921,7 @@ namespace Server.WebApi.Services
         public string MonsterName { get; set; } = "";
         public int? RegionIndex { get; set; }
         public string RegionDescription { get; set; } = "";
+        public int RegionPointCount { get; set; }
         public int Delay { get; set; }
         public int Count { get; set; }
         public int DropSet { get; set; }
@@ -5083,12 +5087,14 @@ namespace Server.WebApi.Services
         public int? SourceRegionX { get; set; }
         /// <summary>起点区域的代表坐标 Y</summary>
         public int? SourceRegionY { get; set; }
+        public int? SourceRegionPointCount { get; set; }
         public int DestinationRegionIndex { get; set; }
         public string DestinationRegionDescription { get; set; } = "";
         /// <summary>终点区域的代表坐标 X</summary>
         public int? DestRegionX { get; set; }
         /// <summary>终点区域的代表坐标 Y</summary>
         public int? DestRegionY { get; set; }
+        public int? DestRegionPointCount { get; set; }
         public string Icon { get; set; } = "";
         public int? NeedItemIndex { get; set; }
         public string? NeedItemName { get; set; }

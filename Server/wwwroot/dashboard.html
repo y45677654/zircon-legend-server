@@ -374,8 +374,22 @@
             <div class="stat-label">物理内存占用</div>
           </div>
 
-          <!-- 4. 在线玩家数量 (重新作为第一排第四个 stat-card 回归，并加入高交互点击跳转与 Hover 效果) -->
-          <div class="stat-card clickable-card animate-in animate-delay-4" onclick="location.href='players.html'">
+          <!-- 4. 注册账号数 -->
+          <div class="stat-card clickable-card animate-in animate-delay-4" onclick="location.href='accounts.html'">
+            <div class="stat-card-header">
+              <div class="stat-icon info" style="color: var(--primary, #3b82f6); background: rgba(59, 130, 246, 0.1); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-value" id="totalAccounts">--</div>
+            <div class="stat-label">注册账号数</div>
+          </div>
+
+          <!-- 5. 在线玩家数量 -->
+          <div class="stat-card clickable-card animate-in animate-delay-5" onclick="location.href='players.html'">
             <div class="stat-card-header">
               <div class="stat-icon success" style="color: var(--success, #10b981); background: rgba(16, 185, 129, 0.1); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
@@ -529,6 +543,10 @@
 
         // 更新物理内存占用
         document.getElementById('memoryUsage').textContent = stats.memoryUsage || '0.0 MB';
+
+        // 更新注册账号数
+        const totalAccountsEl = document.getElementById('totalAccounts');
+        if (totalAccountsEl) totalAccountsEl.textContent = stats.totalAccounts || 0;
 
         // 更新服务器状态
         const statusEl = document.getElementById('serverStatus');

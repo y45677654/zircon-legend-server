@@ -261,8 +261,7 @@
                     <th>身份</th>
                     <th>状态</th>
                     <th>角色数</th>
-                    <th>元宝</th>
-                    <th>猎币</th>
+
                     <th>注册时间</th>
                     <th>最后登录</th>
                     <th>操作</th>
@@ -573,19 +572,12 @@
               : '<span class="badge badge-success">正常</span>'}
           </td>
           <td>${account.characterCount}</td>
-          <td style="color: #f59e0b; font-weight: 500;">${formatNumber(account.gameGold || 0)}</td>
-          <td style="color: #8b5cf6; font-weight: 500;">${formatNumber(account.huntGold || 0)}</td>
+
           <td>${formatDate(account.creationDate)}</td>
           <td>${formatDate(account.lastLogin)}</td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-warning btn-sm" onclick="showGoldModal('${escapeHtml(account.email)}', ${account.gameGold || 0}, ${account.huntGold || 0})" title="修改金币">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="16"></line>
-                  <line x1="8" y1="12" x2="16" y2="12"></line>
-                </svg>
-              </button>
+
               <button class="btn btn-info btn-sm" onclick="showIdentityModal('${escapeHtml(account.email)}', '${account.identity}')" title="调整权限">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -770,37 +762,6 @@
       }
     }
 
-    // 金币修改相关
-    function showGoldModal(email, gameGold, huntGold) {
-      document.getElementById('goldEmail').value = email;
-      document.getElementById('gameGoldValue').value = gameGold;
-      document.getElementById('huntGoldValue').value = huntGold;
-      document.getElementById('goldModal').style.display = 'flex';
-    }
-
-    function hideGoldModal() {
-      document.getElementById('goldModal').style.display = 'none';
-    }
-
-    async function updateGold() {
-      const email = document.getElementById('goldEmail').value;
-      const gameGold = parseInt(document.getElementById('gameGoldValue').value) || 0;
-      const huntGold = parseInt(document.getElementById('huntGoldValue').value) || 0;
-
-      if (gameGold < 0 || huntGold < 0) {
-        alert('金币数量不能为负数');
-        return;
-      }
-
-      try {
-        await api.put(`/api/accounts/${encodeURIComponent(email)}/gold`, { gameGold, huntGold });
-        alert('金币修改成功');
-        hideGoldModal();
-        await loadAccounts();
-      } catch (error) {
-        alert('操作失败: ' + error.message);
-      }
-    }
 
     function escapeHtml(text) {
       const div = document.createElement('div');

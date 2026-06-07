@@ -659,8 +659,8 @@
 
         // Config cards
         for (const [key, meta] of Object.entries(sectionMeta.items)) {
-          const value = sectionData[key];
-          if (value === undefined) continue;
+          // 如果文件中没有该配置，赋予一个空字符串而不是隐藏它，允许用户在界面上填写
+          const value = sectionData[key] !== undefined ? sectionData[key] : '';
 
           const card = createConfigCard(sectionKey, key, meta, value);
           card.classList.add('config-section-group');

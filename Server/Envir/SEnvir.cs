@@ -65,14 +65,22 @@ namespace Server.Envir
         private static readonly Dictionary<string, TagBlockInfo> dictDeviceBlock = new Dictionary<string, TagBlockInfo>();
         #region Synchronization
 
-        private static readonly SynchronizationContext Context = SynchronizationContext.Current;
+        // 移除对 SynchronizationContext 的依赖，改用无锁队列作为游戏主线程的消息泵
+        public static readonly System.Collections.Concurrent.ConcurrentQueue<Action> MainLoopActions = new System.Collections.Concurrent.ConcurrentQueue<Action>();
+
         public static void Send(SendOrPostCallback method)
         {
-            Context.Send(method, null);
+            throw new NotSupportedException("SEnvir.Send 采用阻塞同步，在当前跨平台架构中已废弃以防死锁，请使用 SEnvir.Post 代替。");
         }
+
+        public static void Post(Action action)
+        {
+            MainLoopActions.Enqueue(action);
+        }
+
         public static void Post(SendOrPostCallback method)
         {
-            Context.Post(method, null);
+            MainLoopActions.Enqueue(() => method(null));
         }
 
         public static bool SupportClientUpgrade { get => ClientFileHash.Count > 0; }
@@ -1495,6 +1503,13 @@ namespace Server.Envir
 
                 try
                 {
+                    // 【新增】每帧安全执行外部线程投递过来的并发任务
+                    while (MainLoopActions.TryDequeue(out Action action))
+                    {
+                        try { action(); }
+                        catch (Exception ex) { Log(ex); }
+                    }
+
                     SConnection connection;
                     while (!NewConnections.IsEmpty)
                     {

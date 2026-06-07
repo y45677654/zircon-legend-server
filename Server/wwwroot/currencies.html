@@ -294,9 +294,9 @@
                   <tr>
                     <th>账号邮箱</th>
                     <th>身份等级</th>
-                    <th>普通金币 💰</th>
-                    <th>游戏元宝 🪙</th>
-                    <th>游戏猎币 🎯</th>
+                    <th>普通金币</th>
+                    <th>游戏元宝</th>
+                    <th>游戏猎币</th>
                     <th>资金调整</th>
                   </tr>
                 </thead>
@@ -677,7 +677,23 @@
       try {
         await api.put(`/api/accounts/${encodeURIComponent(email)}/${urlPath}`, { amount });
         alert(`${currencyName}调整成功`);
-        hideCurrencyModal();
+        
+        // 本地更新当前模态框内的数值并保留模态框开启，方便连续操作
+        if (curSelectedType === 'GameGold') {
+            currentAccountGold += amount;
+            document.getElementById('currencyCurrentGold').value = currentAccountGold;
+        } else if (curSelectedType === 'HuntGold') {
+            currentAccountHunt += amount;
+            document.getElementById('currencyCurrentHunt').value = currentAccountHunt;
+        } else {
+            currentAccountNormal += amount;
+            document.getElementById('currencyCurrentNormal').value = currentAccountNormal;
+        }
+        
+        // 重置输入的金额并刷新预览
+        document.getElementById('currencyAmount').value = '';
+        updateCurrencyPreview();
+        
         await loadAccounts();
       } catch (error) {
         alert('操作失败: ' + error.message);

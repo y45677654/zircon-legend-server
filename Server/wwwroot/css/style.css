@@ -411,12 +411,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .sidebar-header {
-  padding: 1.25rem;
+  height: var(--topbar-height);
+  padding: 0 1.5rem;
   border-bottom: 1px solid var(--border-primary);
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  min-height: var(--topbar-height);
 }
 
 .sidebar-logo {
